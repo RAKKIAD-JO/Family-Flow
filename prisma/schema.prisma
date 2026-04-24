@@ -1,0 +1,38 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Users {
+  user_id      Int           @id @default(autoincrement())
+  userName     String
+  phone        Int
+  // เพิ่ม field นี้เพื่อให้เห็นว่ารายการนี้เป็นส่วนตัวหรือไม่ตามที่คุณต้องการ
+  transaction Transactions[]
+}
+
+model Categorys {
+  Category_id  Int           @id @default(autoincrement())
+  name         String
+  type         String        // "INCOME" หรือ "EXPENSE"
+  transaction Transactions[]
+}
+
+model Transactions {
+  Transaction_id          Int      @id @default(autoincrement())
+  amount      Float
+  description String
+  date        DateTime @default(now())
+  isPersonal  Boolean  @default(false) // เพิ่มไว้แยกส่วนตัว/ครอบครัว
+
+  // เชื่อมไปยัง User
+  userId      Int
+  user        Users     @relation(fields: [userId], references: [user_id])
+
+  // เชื่อมไปยัง Category
+  categoryId  Int
+  category    Categorys @relation(fields: [categoryId], references: [Category_id])
+}
