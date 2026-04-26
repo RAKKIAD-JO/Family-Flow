@@ -7,32 +7,88 @@ datasource db {
 }
 
 model Users {
-  user_id      Int           @id @default(autoincrement())
-  userName     String
-  phone        Int
-  // เพิ่ม field นี้เพื่อให้เห็นว่ารายการนี้เป็นส่วนตัวหรือไม่ตามที่คุณต้องการ
-  transaction Transactions[]
+  user_id       Int     @id @default(autoincrement())
+  name     String
+  email    String  @unique
+  phone    String?
+  password String
+  isActive Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  transactions Transactions[]
+  accounts     Accounts[]
 }
 
-model Categorys {
-  Category_id  Int           @id @default(autoincrement())
-  name         String
-  type         String        // "INCOME" หรือ "EXPENSE"
-  transaction Transactions[]
+model Accounts {
+  account_id       Int    @id @default(autoincrement())
+  name     String 
+  balance  Float  @default(0)
+  currency String @default("THB")
+
+  userId       Int
+  user         Users          @relation(fields: [userId], references: [user_id])
+  transactions Transactions[]
+
+  createdAt DateTime @default(now())
+}
+
+model Categories {
+  category_id   Int          @id @default(autoincrement())
+  name String
+  type CategoryType
+
+  parentId Int? 
+  parent   Categories?  @relation("CategoryHierarchy", fields: [parentId], references: [category_id])
+  children Categories[] @relation("CategoryHierarchy")
+
+  transactions Transactions[]
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
 }
 
 model Transactions {
-  Transaction_id          Int      @id @default(autoincrement())
+  transaction_id          Int     @id @default(autoincrement())
   amount      Float
-  description String
-  date        DateTime @default(now())
-  isPersonal  Boolean  @default(false) // เพิ่มไว้แยกส่วนตัว/ครอบครัว
+  description String?
 
-  // เชื่อมไปยัง User
-  userId      Int
-  user        Users     @relation(fields: [userId], references: [user_id])
+  date       DateTime @default(now())
+  isPersonal Boolean  @default(true)
 
-  // เชื่อมไปยัง Category
-  categoryId  Int
-  category    Categorys @relation(fields: [categoryId], references: [Category_id])
+
+  userId Int
+  user   Users @relation(fields: [userId], references: [user_id])
+
+  categoryId Int
+  category   Categories @relation(fields: [categoryId], references: [category_id])
+
+  accountId Int
+  account   Accounts @relation(fields: [accountId], references: [account_id])
+
+  // Analytics-friendly
+  createdAt DateTime @default(now())
+
+  tags TransactionTag[]
+}
+
+model Tag {
+  tag_id   Int    @id @default(autoincrement())
+  name String @unique
+
+  transactions TransactionTag[]
+}
+
+model TransactionTag {
+  transactionId Int
+  tagId         Int
+
+  transaction Transactions @relation(fields: [transactionId], references: [transaction_id])
+  tag         Tag         @relation(fields: [tagId], references: [tag_id])
+
+  @@id([transactionId, tagId])
 }

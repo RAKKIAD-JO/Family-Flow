@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Aside from "@/src/components/slidebar"
+import Aside from "@/components/slidebar"
 
 export default function Home() {
   return (
