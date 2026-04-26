@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ message: "ลงทะเบียนสำเร็จ" }, { status: 201 });
+    return NextResponse.json({ message: "ลงทะเบียนสำเร็จ", data:data }, { status: 201 });
   } catch (error) {
     return NextResponse.json(
       { message: "Invalid request", error },
