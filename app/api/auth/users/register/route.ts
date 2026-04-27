@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { email, z } from "zod";
+import { z,email } from "zod";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 
 const registerSchema = z.object({
   name: z.string().min(2),
-  email: z.email(),
+  email: z.string().email(),
   password: z.string().min(8),
   phone: z.string().optional(),
 });
