@@ -1,9 +1,10 @@
 import Image from "next/image";
 import Aside from "@/components/slidebar"
 
+
 export default function Home() {
   return (
-   <div>
+   <div className=" ">
     <header>
       <p className="text-2xl text-blue-600 ">รายรับ-รายจ่าย Me&Family</p>
     </header>
