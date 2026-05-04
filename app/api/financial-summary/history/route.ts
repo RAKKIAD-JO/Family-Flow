@@ -8,11 +8,30 @@ export async function GET(req: NextRequest) {
     if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
     const sp = req.nextUrl.searchParams;
-    const groupBy = sp.get("groupBy") || "daily"; // รับค่า: daily, monthly, yearly
-    const from = sp.get("from");
-    const to = sp.get("to");
+    const groupBy = sp.get("groupBy") || "daily";
+    
+    // --- เริ่มส่วน Logic ตั้งค่า Default ---
+    let from = sp.get("from");
+    let to = sp.get("to");
 
-    // 1. ดึงข้อมูลจาก DB
+    const now = new Date();
+    const currentYear = now.getFullYear();
+
+    if (!from) {
+      if (groupBy === "daily") {
+        // รายวัน: ย้อนหลัง 30 วันจากวันนี้
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        from = thirtyDaysAgo.toISOString().split("T")[0];
+      } else if (groupBy === "monthly") {
+        // รายเดือน: มกราคม - ธันวาคม ของปีปัจจุบัน
+        from = `${currentYear}-01-01`;
+        to = `${currentYear}-12-31`;
+      }
+      // ถ้าเป็น yearly ไม่ต้องใส่ from/to เพื่อให้เห็นประวัติทั้งหมด
+    }
+    // --- จบส่วน Logic ตั้งค่า Default ---
+
     const transactions = await db.transactions.findMany({
       where: {
         userId,
@@ -27,20 +46,18 @@ export async function GET(req: NextRequest) {
       orderBy: { date: "asc" },
     });
 
-    // 2. Logic การจัดกลุ่ม (Grouping Logic)
     const summaryMap = new Map<string, any>();
 
     transactions.forEach((t) => {
       const date = t.date;
       let groupKey = "";
 
-      // สร้าง Key ตามเงื่อนไขที่ User เลือก
       if (groupBy === "yearly") {
-        groupKey = `${date.getFullYear()}`; // "2026"
+        groupKey = `${date.getFullYear()}`;
       } else if (groupBy === "monthly") {
-        groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; // "2026-04"
+        groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       } else {
-        groupKey = date.toISOString().split("T")[0]; // "2026-04-29" (Daily)
+        groupKey = date.toISOString().split("T")[0];
       }
 
       if (!summaryMap.has(groupKey)) {
@@ -61,7 +78,6 @@ export async function GET(req: NextRequest) {
       data.count += 1;
     });
 
-    // 3. แปลงเป็น Array เพื่อส่งให้ Frontend
     const result = Array.from(summaryMap.values()).map(item => ({
       ...item,
       net: item.income - item.expense
@@ -70,6 +86,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(result);
 
   } catch (error) {
+    console.error("Analytics Error:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }
