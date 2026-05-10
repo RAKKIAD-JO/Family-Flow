@@ -1,62 +1,140 @@
+import { NextRequest, NextResponse } from "next/server";
+import {
+  eachDayOfInterval,
+  endOfDay,
+  format,
+  startOfDay,
+  subDays,
+} from "date-fns";
 import { db } from "@/lib/db";
-import { startOfMonth, endOfMonth, format } from "date-fns";
+import { authenticate } from "@/lib/auth";
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const userId = parseInt(searchParams.get("userId") || "0");
-
-  // กำหนดช่วงเวลา (เช่น เดือนปัจจุบัน)
-  const now = new Date();
-  const start = startOfMonth(now);
-  const end = endOfMonth(now);
-
-  // 1. ดึงข้อมูล Transactions ทั้งหมดของเดือนนี้ พร้อม Join Category
-  const transactions = await db.transactions.findMany({
-    // where: {
-    //   userId: userId,
-    // //   date: { gte: start, lte: end },
-    // },
-    include: {
-      category: true, // Join เพื่อดูว่าเป็น INCOME หรือ EXPENSE
-    },
-  });
-
-  // 2. Logic การคำนวณ (Programmer Logic)
-  let totalIncome = 0;
-  let totalExpense = 0;
-  const dailyStats: Record<string, { income: number; expense: number }> = {};
-
-  transactions.forEach((t) => {
-    const day = format(t.date, "yyyy-MM-dd"); // จัดกลุ่มตามวัน
-    const amount = t.amount;
-
-    // เริ่มต้น object ของวันนั้นๆ ถ้ายังไม่มี
-    if (!dailyStats[day]) {
-      dailyStats[day] = { income: 0, expense: 0 };
+export async function GET(req: NextRequest) {
+  try {
+    const userId = await authenticate(req);
+    if (!userId) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    if (t.category.type === "INCOME") {
-      totalIncome += amount;
-      dailyStats[day].income += amount;
-    } else {
-      totalExpense += amount;
-      dailyStats[day].expense += amount;
+    const today = new Date();
+    const from = startOfDay(subDays(today, 6));
+    const to = endOfDay(today);
+
+    const [user, balanceResult, incomeResult, expenseResult, trendTransactions] =
+      await Promise.all([
+        db.users.findUnique({
+          where: { user_id: userId },
+          select: {
+            user_id: true,
+            name: true,
+            email: true,
+          },
+        }),
+        db.accounts.aggregate({
+          where: {
+            userId,
+            deletedAt: null,
+          },
+          _sum: {
+            balance: true,
+          },
+        }),
+        db.transactions.aggregate({
+          where: {
+            userId,
+            category: {
+              type: "INCOME",
+            },
+          },
+          _sum: {
+            amount: true,
+          },
+        }),
+        db.transactions.aggregate({
+          where: {
+            userId,
+            category: {
+              type: "EXPENSE",
+            },
+          },
+          _sum: {
+            amount: true,
+          },
+        }),
+        db.transactions.findMany({
+          where: {
+            userId,
+            date: {
+              gte: from,
+              lte: to,
+            },
+          },
+          include: {
+            category: {
+              select: {
+                type: true,
+              },
+            },
+          },
+          orderBy: {
+            date: "asc",
+          },
+        }),
+      ]);
+
+    const trendMap = new Map<string, { income: number; expense: number }>();
+
+    for (const day of eachDayOfInterval({ start: from, end: to })) {
+      trendMap.set(format(day, "yyyy-MM-dd"), { income: 0, expense: 0 });
     }
-  });
 
-  // 3. ดึงยอดเงินรวมจากทุกบัญชี (Total Balance)
-  const accounts = await db.accounts.aggregate({
-    where: { userId: userId },
-    _sum: { balance: true },
-  });
+    for (const item of trendTransactions) {
+      const key = format(item.date, "yyyy-MM-dd");
+      const current = trendMap.get(key);
 
-  return Response.json({
-    summary: {
-      totalBalance: accounts._sum.balance || 0,
-      monthlyIncome: totalIncome,
-      monthlyExpense: totalExpense,
-      netChange: totalIncome - totalExpense,
-    },
-    dailyTrends: dailyStats, // ข้อมูลสำหรับวาดกราฟรายวัน
-  });
+      if (!current) {
+        continue;
+      }
+
+      if (item.category.type === "INCOME") {
+        current.income += item.amount;
+      } else {
+        current.expense += item.amount;
+      }
+    }
+
+    const trend = Array.from(trendMap.entries()).map(([date, values]) => ({
+      date,
+      label: format(new Date(date), "EEE"),
+      income: values.income,
+      expense: values.expense,
+      net: values.income - values.expense,
+    }));
+
+    const totalIncome = incomeResult._sum.amount || 0;
+    const totalExpense = expenseResult._sum.amount || 0;
+
+    return NextResponse.json({
+      user: {
+        id: user?.user_id ?? userId,
+        name: user?.name ?? "Family Flow User",
+        email: user?.email ?? "",
+      },
+      summary: {
+        totalBalance: balanceResult._sum.balance || 0,
+        totalIncome,
+        totalExpense,
+        netIncome: totalIncome - totalExpense,
+        currency: "THB",
+      },
+      trend,
+    });
+  } catch (error) {
+    console.error("Dashboard summary error:", error);
+
+    return NextResponse.json(
+      { message: "Internal server error" },
+      { status: 500 },
+    );
+  }
 }

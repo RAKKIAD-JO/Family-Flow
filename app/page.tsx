@@ -1,29 +1,24 @@
 "use client";
-import Image from "next/image";
-import Aside from "@/components/slidebar"
+
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { date } from "zod";
-
 
 export default function Home() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [message, setMessage] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
-    setMessage("")
 
     try {
       const res = await fetch("/api/auth/users/login", {
         method: "POST",
         headers: {
-          "Content-Type": "Application/json "
+          "Content-Type": "application/json",
         },
         credentials: "include",
         body: JSON.stringify({ email, password }),
@@ -31,19 +26,20 @@ export default function Home() {
 
       const data = await res.json();
       if (!res.ok) {
-       toast.error(data.message || "Login failed.");
+        toast.error(data.message || "Login failed.");
         return;
       }
 
-      toast.success(data.message ||"Login Successfully")
-      router.push("/home")
-      console.log("token", data.token)
-    } catch (error) {
-      toast.error("Cannot connect to server")
+      toast.success(data.message || "Login successfully");
+      router.push("/dashboard");
+      router.refresh();
+    } catch {
+      toast.error("Cannot connect to server");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(0,163,108,0.15),transparent_40%),linear-gradient(135deg,#F7F7F7_0%,#EDEDED_45%,#E5F2EC_100%)] px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
       <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-6xl items-center justify-center">
@@ -58,7 +54,8 @@ export default function Home() {
                   Manage your family finances in one calm, simple place.
                 </h1>
                 <p className="max-w-md text-sm leading-6 text-blue-100/90">
-                  ยินดีต้อนรับเข้าสู่ระบบการจัดการเงิน
+                  Sign in to review your family budget, cash flow, and recent
+                  transactions in a cleaner dashboard.
                 </p>
               </div>
             </div>
@@ -96,14 +93,12 @@ export default function Home() {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label
-                      htmlFor="password"
-                      className="text-sm font-medium text-slate-700"
-                    >
-                      Password
-                    </label>
-                  </div>
+                  <label
+                    htmlFor="password"
+                    className="text-sm font-medium text-slate-700"
+                  >
+                    Password
+                  </label>
                   <input
                     id="password"
                     type="password"
@@ -113,10 +108,10 @@ export default function Home() {
                   />
                 </div>
 
-                <button 
-                type="submit" 
-                disabled={loading}
-                 className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-green-700 cursor-pointer"
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full cursor-pointer rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {loading ? "Loading..." : "Sign in"}
                 </button>

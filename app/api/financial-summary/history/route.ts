@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { authenticate } from "@/lib/auth";
 
+type SummaryBucket = {
+  label: string;
+  income: number;
+  expense: number;
+  count: number;
+};
+
 export async function GET(req: NextRequest) {
   try {
     const userId = await authenticate(req);
@@ -46,7 +53,7 @@ export async function GET(req: NextRequest) {
       orderBy: { date: "asc" },
     });
 
-    const summaryMap = new Map<string, any>();
+    const summaryMap = new Map<string, SummaryBucket>();
 
     transactions.forEach((t) => {
       const date = t.date;
@@ -70,6 +77,10 @@ export async function GET(req: NextRequest) {
       }
 
       const data = summaryMap.get(groupKey);
+      if (!data) {
+        return;
+      }
+
       if (t.category.type === "INCOME") {
         data.income += t.amount;
       } else {
