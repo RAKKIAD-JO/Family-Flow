@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { ZodError, z, email } from "zod";
+import { authenticate } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await db.users.findMany({
+    const userId = await authenticate(req);
+    if (!userId) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await db.users.findFirst({
+      where: {
+        user_id: userId,
+        isActive: true,
+        deletedAt: null,
+      },
       select: {
         user_id: true,
         name: true,
@@ -13,19 +23,16 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return NextResponse.json(
-      { message: "สำเร็จ", data: user },
-      { status: 201 },
-    );
-  } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json(
-        { message: "Invalid request", errors: error.flatten() },
-        { status: 400 },
-      );
+    if (!user) {
+      return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
-    console.error("ไม่สำเร็จ:", error);
+    return NextResponse.json(
+      { message: "Success", data: user },
+      { status: 200 },
+    );
+  } catch (error) {
+    console.error("Get current user error:", error);
     return NextResponse.json(
       { message: "Internal server error" },
       { status: 500 },

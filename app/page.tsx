@@ -31,7 +31,7 @@ export default function Home() {
       }
 
       toast.success(data.message || "Login successfully");
-      router.push("/dashboard");
+      router.push("/");
       router.refresh();
     } catch {
       toast.error("Cannot connect to server");
