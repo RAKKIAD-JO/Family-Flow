@@ -46,3 +46,12 @@ export type TransactionItem = {
 export type TransactionsPayload = {
   data: TransactionItem[];
 };
+
+export type SummaryCardItem = {
+  title: string;
+  value: number;
+  icon: string;
+  iconClassName: string;
+  panelClassName: string;
+  textClassName: string;
+};

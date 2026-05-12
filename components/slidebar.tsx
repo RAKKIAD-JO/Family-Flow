@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
+import { useRouter } from "next/navigation";
 import {
   AccountOption,
   CategoryOption,
@@ -21,6 +22,7 @@ const initialForm: TransactionForm = {
 };
 
 function Slidebar() {
+  const router = useRouter();
   const [userName, setUserName] = useState<CurrentUser | null>(null);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -194,6 +196,26 @@ function Slidebar() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      const res = await fetch("/api/auth/users/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        toast.error("Logout failed");
+        return;
+      }
+
+      toast.success("Logged out successfully");
+      router.push("/");
+      router.refresh();
+    } catch {
+      toast.error("Cannot connect to server");
+    }
+  };
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void getUser();
@@ -218,13 +240,13 @@ function Slidebar() {
   }, [isOpen, isSubmitting]);
 
   return (
-    <div className="h-screen rounded-lg border border-gray-300 bg-gray-100 p-4">
+    <div className="h-full rounded-md shadow-md bg-white p-4 ">
       <div className="flex items-center gap-4 p-4">
         <div>
-          <img src="/assets/logo.png" alt="logo" className="w-10" />
+          <img src="/Logo.png" alt="logo" className="w-10 rounded-full " />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">My Family-App</h1>
+          <h1 className=" font-bold">My App</h1>
           <p className="text-sm text-gray-500">{userName?.name}</p>
         </div>
       </div>
@@ -255,7 +277,7 @@ function Slidebar() {
             <div className="mb-6 flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-medium uppercase tracking-[0.2em] text-green-600">
-                  Quick add
+                  Family flow
                 </p>
                 <h2
                   id="add-transaction-title"
@@ -455,6 +477,17 @@ function Slidebar() {
             </a>
           </div>
         </ul>
+      </div>
+
+      <div className="mt-6 border-t border-stone-200 pt-4">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex w-full items-center gap-2 rounded px-4 py-3 text-left text-red-600 transition hover:bg-red-50"
+        >
+          <Icon icon="material-symbols:logout-rounded" width="24" height="24" />
+          <span className="font-medium">Logout</span>
+        </button>
       </div>
     </div>
   );

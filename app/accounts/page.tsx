@@ -1,6 +1,6 @@
 import React from "react";
 import Slidebar from "../../components/slidebar";
-import CardData from "../../components/dashboard/cardData";
+import AccountsPage from "../../components/accounts/accountsPage";
 
 function page() {
   return (
@@ -10,8 +10,8 @@ function page() {
           <Slidebar />
         </aside>
         <main className="w-full py-6 pr-2">
-          <div className="mx-auto ax-w-350">
-            <CardData />
+          <div className="mx-auto max-w-350">
+            <AccountsPage />
           </div>
         </main>
       </div>
